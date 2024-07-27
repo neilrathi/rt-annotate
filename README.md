@@ -11,4 +11,5 @@ a super short python script to automatically annotate (reading time) datasets wi
 ## dependencies
 * [stanza](https://stanfordnlp.github.io/stanza/). the first time you run the script, models will be downloaded your home directory.
 * [wordfreq](https://pypi.org/project/wordfreq/) for frequency estimation
+* [surprisal](https://github.com/aalok-sathe/surprisal/) for surprisal
 * pandas
