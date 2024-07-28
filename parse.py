@@ -12,15 +12,25 @@ parser.add_argument('--nopunct', help='does your file not include punctuation?',
 parser.add_argument('--depparse', help='compute dependency length?', action = 'store_true')
 parser.add_argument('--surprisal', help='compute surprisals?', action = 'store_true')
 parser.add_argument('--surp_model', type=str, help='huggingface surprisal model', default = 'gpt2')
+parser.add_argument('--sentcol', type=str, help='name of sentence number column', default = 'sent_num')
+# parser.add_argument('--surp_lag', type=int, help='how much context?', default = 0)
 parser.add_argument('--lag_num', type=int, help='how much lag', default = 2)
-parser.add_argument('--lag_keys', type=list, help='which keys to lag', default = ['freq', 'length'])
+parser.add_argument('--lag_keys', type=str, help='which keys to lag', nargs="*", default = ['freq', 'length'])
 args = parser.parse_args()
 
 df = pd.read_csv(args.file)
-if args.nopunct:
-    sentences = df.groupby('sent_num')['word'].apply(lambda x: ' '.join(x)).str[:-1].tolist()
+
+if args.sentcol == 'NONE':
+    mask = df['word'].str.contains(r'\.')
+    df['sent_num'] = mask.cumsum().shift(fill_value=0)
+    sentcol = 'sent_num'
 else:
-    sentences = df.groupby('sent_num')['word'].apply(lambda x: ' '.join(x)).tolist()
+    sentcol = args.sentcol
+
+if args.nopunct:
+    sentences = df.groupby(sentcol)['word'].apply(lambda x: ' '.join(x)).str[:-1].tolist()
+else:
+    sentences = df.groupby(sentcol)['word'].apply(lambda x: ' '.join(x)).tolist()
 
 def dependency_length(sentences):
 
@@ -62,6 +72,7 @@ if args.surprisal:
     surprisals = []
 
     for i, s in enumerate(surprisal_model.surprise(sentences)):
+        # huggingface pads to maxlen so we have to use the true length
         surprisals += list(s.surprisals[:len(sentences[i].split(' '))])
 
     df['surprisal'] = surprisals
@@ -74,7 +85,7 @@ def lag(df, keys = ['freq', 'length'], num=2):
     for key in keys:
         for i in range(num):
 
-            df[f'{key}_{i+1}'] = df.groupby('sent_num')[key].shift(i + 1)
+            df[f'{key}_{i+1}'] = df.groupby(sentcol)[key].shift(i + 1)
 
     return df
 
